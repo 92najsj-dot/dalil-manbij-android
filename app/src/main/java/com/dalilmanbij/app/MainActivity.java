@@ -158,7 +158,7 @@ public class MainActivity extends Activity {
                     prefs.edit().putBoolean("native_welcome_seen_v1", true).apply();
                     new AlertDialog.Builder(MainActivity.this)
                             .setTitle("📍 دليل منبج")
-                            .setMessage("💚 أهلاً وسهلاً فيك!\\n\\nكل منبج وريفها بين إيديك.\\n\\n🛍️ تسوّق   •   🏷️ بيع   •   📢 أعلن   •   🔎 اكتشف\\n\\nكل ما تحتاجه بمنبج وريفها، بمكان واحد.")
+                            .setMessage("💚 أهلاً وسهلاً فيك!\n\nكل منبج وريفها بين إيديك.\n\n🛍️ تسوّق   •   🏷️ بيع   •   📢 أعلن   •   🔎 اكتشف\n\nكل ما تحتاجه بمنبج وريفها، بمكان واحد.")
                             .setPositiveButton("✓ يلا نبدأ", (dialog, which) -> dialog.dismiss())
                             .setCancelable(false)
                             .show();
@@ -206,7 +206,13 @@ public class MainActivity extends Activity {
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
         } else {
-            webView.loadUrl(HOME);
+            Uri incoming = getIntent() != null ? getIntent().getData() : null;
+            if (incoming != null && "https".equalsIgnoreCase(incoming.getScheme())
+                    && "dalil-manbij-new.pages.dev".equalsIgnoreCase(incoming.getHost())) {
+                webView.loadUrl(incoming.toString());
+            } else {
+                webView.loadUrl(HOME);
+            }
         }
     }
 
