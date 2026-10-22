@@ -235,7 +235,7 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 String safeUrl = (url == null || url.trim().isEmpty()) ? HOME : url.trim();
                 String message = (text == null ? "" : text.trim());
-                if (!message.isEmpty()) message += "\\n";
+                if (!message.isEmpty()) message += "\n";
                 message += safeUrl;
                 Intent sendIntent = new Intent(Intent.ACTION_SEND);
                 sendIntent.setType("text/plain");
