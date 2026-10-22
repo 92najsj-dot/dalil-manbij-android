@@ -24,6 +24,7 @@ import android.graphics.Color;
 
 public class MainActivity extends Activity {
     private static final String HOME = "https://dalil-manbij-new.pages.dev/";
+    private static final String OAUTH_SCHEME = "dalilmanbij";
     private WebView webView;
     private LinearLayout errorPanel;
     private ValueCallback<Uri[]> fileCallback;
@@ -94,6 +95,8 @@ public class MainActivity extends Activity {
         setContentView(root);
 
         WebSettings settings = webView.getSettings();
+        // Let the website recognize the APK and use its dedicated OAuth return URI.
+        settings.setUserAgentString(settings.getUserAgentString() + " DalilManbijAndroid");
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);
@@ -160,11 +163,43 @@ public class MainActivity extends Activity {
             }
         });
 
-        if (savedInstanceState != null) {
+        if (isOAuthCallback(getIntent())) {
+            webView.loadUrl(buildOAuthReturnUrl(getIntent().getData()));
+        } else if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
         } else {
             webView.loadUrl(HOME);
         }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (isOAuthCallback(intent) && webView != null) {
+            webView.loadUrl(buildOAuthReturnUrl(intent.getData()));
+        }
+    }
+
+    private boolean isOAuthCallback(Intent intent) {
+        if (intent == null || intent.getData() == null) return false;
+        Uri uri = intent.getData();
+        return OAUTH_SCHEME.equals(uri.getScheme())
+                && "auth".equals(uri.getHost())
+                && "/callback".equals(uri.getPath());
+    }
+
+    // Pass only OAuth result parameters back into the existing WebView origin so
+    // Supabase JS can exchange the PKCE code using the verifier stored in WebView.
+    private String buildOAuthReturnUrl(Uri callback) {
+        Uri.Builder builder = Uri.parse(HOME).buildUpon();
+        if (callback != null) {
+            for (String key : new String[]{"code", "error", "error_code", "error_description"}) {
+                String value = callback.getQueryParameter(key);
+                if (value != null && !value.isEmpty()) builder.appendQueryParameter(key, value);
+            }
+        }
+        return builder.build().toString();
     }
 
     private void openExternal(Uri uri) {
