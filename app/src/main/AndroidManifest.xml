@@ -24,6 +24,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="dalilmanbij" android:host="auth" android:path="/callback" />
             </intent-filter>
+            <!-- Shared listing/shop links can be offered to this APK; verified App Links need domain association. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="dalil-manbij-new.pages.dev" android:pathPrefix="/" />
+            </intent-filter>
         </activity>
     </application>
 </manifest>
