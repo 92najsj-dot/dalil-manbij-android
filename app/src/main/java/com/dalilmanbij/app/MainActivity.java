@@ -28,6 +28,7 @@ public class MainActivity extends Activity {
     private LinearLayout errorPanel;
     private ValueCallback<Uri[]> fileCallback;
     private static final int FILE_CHOOSER_REQUEST = 2041;
+    private boolean welcomeShownThisSession = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -150,15 +151,13 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                // App-only first-launch welcome. This is stored in Android preferences and
-                // does not change the website or its localStorage.
-                android.content.SharedPreferences prefs =
-                        getSharedPreferences("dalil_app_preferences", MODE_PRIVATE);
-                if (!prefs.getBoolean("native_welcome_seen_v1", false)) {
-                    prefs.edit().putBoolean("native_welcome_seen_v1", true).apply();
+                // Show welcome once per app process/session: returning from background
+                // does not show it again, but a fresh launch after the app is closed does.
+                if (!welcomeShownThisSession) {
+                    welcomeShownThisSession = true;
                     new AlertDialog.Builder(MainActivity.this)
                             .setTitle("📍 دليل منبج")
-                            .setMessage("💚 أهلاً وسهلاً فيك!\n\nكل منبج وريفها بين إيديك.\n\n🛍️ تسوّق   •   🏷️ بيع   •   📢 أعلن   •   🔎 اكتشف\n\nكل ما تحتاجه بمنبج وريفها، بمكان واحد.")
+                            .setMessage("💚 أهلاً وسهلاً فيك!\n\nكل منبج وريفها بين إيديك.\n\n🛍️ تسوّق   •   🏷️ بيع   •   📢 أعلن   •   🔎 اكتشف\n\n✨ كل ما تحتاجه بمنبج وريفها، بمكان واحد!\n\n🤲 صلّوا على النبي ﷺ\n\n💻 تم التطوير بواسطة عبد نعسو")
                             .setPositiveButton("✓ يلا نبدأ", (dialog, which) -> dialog.dismiss())
                             .setCancelable(false)
                             .show();
