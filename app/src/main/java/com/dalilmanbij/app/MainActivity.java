@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.webkit.ValueCallback;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -103,6 +104,8 @@ public class MainActivity extends Activity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setSupportMultipleWindows(false);
 
+        webView.addJavascriptInterface(new NativeShareBridge(), "NativeShare");
+
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
@@ -151,6 +154,17 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
+                // WebView does not reliably expose the browser's native Web Share API.
+                // Route navigator.share() to Android's system Sharesheet instead.
+                String nativeShareScript = "(function(){try{" +
+                    "if(location.hostname!=='dalil-manbij-new.pages.dev')return;" +
+                    "if(!window.NativeShare)return;" +
+                    "Object.defineProperty(navigator,'share',{configurable:true,value:function(data){" +
+                    "data=data||{};window.NativeShare.share(String(data.title||'دليل منبج 📍')," +
+                    "String(data.text||''),String(data.url||location.href));return Promise.resolve();" +
+                    "}});" +
+                    "}catch(e){console.log('Native share bridge:',e);}})();";
+                view.evaluateJavascript(nativeShareScript, null);
                 // Show welcome once per app process/session: returning from background
                 // does not show it again, but a fresh launch after the app is closed does.
                 if (!welcomeShownThisSession) {
@@ -212,6 +226,24 @@ public class MainActivity extends Activity {
             } else {
                 webView.loadUrl(HOME);
             }
+        }
+    }
+
+    private final class NativeShareBridge {
+        @JavascriptInterface
+        public void share(String title, String text, String url) {
+            runOnUiThread(() -> {
+                String safeUrl = (url == null || url.trim().isEmpty()) ? HOME : url.trim();
+                String message = (text == null ? "" : text.trim());
+                if (!message.isEmpty()) message += "\\n";
+                message += safeUrl;
+                Intent sendIntent = new Intent(Intent.ACTION_SEND);
+                sendIntent.setType("text/plain");
+                sendIntent.putExtra(Intent.EXTRA_SUBJECT,
+                        (title == null || title.trim().isEmpty()) ? "دليل منبج 📍" : title.trim());
+                sendIntent.putExtra(Intent.EXTRA_TEXT, message);
+                startActivity(Intent.createChooser(sendIntent, "مشاركة الرابط"));
+            });
         }
     }
 
