@@ -150,31 +150,29 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                // Native-app-only enhancement: turn the existing real featured promotions
-                // from the website into a right-to-left horizontal carousel. Website files
-                // and production hosting remain untouched.
+                // Native-app-only enhancement. Wait for Supabase-backed promotions to render
+                // before enabling the carousel; onPageFinished fires before async data arrives.
                 String carouselScript = "(function(){try{" +
                     "if(location.hostname!=='dalil-manbij-new.pages.dev')return;" +
-                    "var section=document.getElementById('featuredPromotions');" +
-                    "var grid=document.getElementById('promotionGrid');" +
-                    "if(!section||!grid||grid.dataset.appCarousel==='1')return;" +
-                    "var style=document.createElement('style');" +
-                    "style.textContent='#featuredPromotions #promotionGrid.app-promo-carousel{display:flex!important;flex-wrap:nowrap!important;gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;direction:rtl;padding:6px 2px 14px;-webkit-overflow-scrolling:touch;scrollbar-width:none}'+ " +
+                    "var styleId='dalil-app-promo-carousel-style';" +
+                    "if(!document.getElementById(styleId)){var st=document.createElement('style');st.id=styleId;" +
+                    "st.textContent='#featuredPromotions #promotionGrid.app-promo-carousel{display:flex!important;flex-wrap:nowrap!important;gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;direction:rtl;padding:6px 2px 14px;-webkit-overflow-scrolling:touch;scrollbar-width:none}'+ " +
                     "'#featuredPromotions #promotionGrid.app-promo-carousel::-webkit-scrollbar{display:none}'+ " +
                     "'#featuredPromotions #promotionGrid.app-promo-carousel>.promo-card{flex:0 0 min(82%,310px);min-width:0;scroll-snap-align:start}'+ " +
-                    "'#featuredPromotions .promo-card{height:auto}';" +
-                    "document.head.appendChild(style);" +
-                    "grid.classList.add('app-promo-carousel');grid.dataset.appCarousel='1';" +
+                    "'#featuredPromotions .promo-card{height:auto}';document.head.appendChild(st);}" +
+                    "var grid=document.getElementById('promotionGrid');if(!grid)return;" +
+                    "if(grid.dataset.appCarouselInit==='1')return;grid.dataset.appCarouselInit='1';" +
                     "var timer=null;function stop(){if(timer){clearInterval(timer);timer=null;}}" +
                     "function start(){stop();if(grid.children.length<2||document.hidden)return;timer=setInterval(function(){" +
-                    "var max=grid.scrollWidth-grid.clientWidth;if(max<8)return;" +
-                    "var rtl=getComputedStyle(grid).direction==='rtl';" +
-                    "var atEnd=rtl?grid.scrollLeft<=-max+4:grid.scrollLeft>=max-4;" +
-                    "if(atEnd){grid.scrollTo({left:rtl?0:0,behavior:'smooth'});}" +
+                    "if(grid.children.length<2)return;var max=grid.scrollWidth-grid.clientWidth;if(max<8)return;" +
+                    "var rtl=getComputedStyle(grid).direction==='rtl';var current=rtl?Math.abs(grid.scrollLeft):grid.scrollLeft;" +
+                    "if(current>=max-8){grid.scrollTo({left:0,behavior:'smooth'});}" +
                     "else{grid.scrollBy({left:(rtl?-1:1)*Math.min(grid.clientWidth*.82,300),behavior:'smooth'});}" +
                     "},4500);}" +
-                    "grid.addEventListener('touchstart',stop,{passive:true});grid.addEventListener('touchend',function(){setTimeout(start,2500);},{passive:true});" +
-                    "document.addEventListener('visibilitychange',function(){document.hidden?stop():start();});start();" +
+                    "function apply(){if(grid.children.length){grid.classList.add('app-promo-carousel');start();}}" +
+                    "var observer=new MutationObserver(function(){apply();});observer.observe(grid,{childList:true,subtree:false});" +
+                    "apply();grid.addEventListener('touchstart',stop,{passive:true});grid.addEventListener('touchend',function(){setTimeout(start,2500);},{passive:true});" +
+                    "document.addEventListener('visibilitychange',function(){document.hidden?stop():start();});" +
                     "}catch(e){console.log('App featured carousel:',e);}})();";
                 view.evaluateJavascript(carouselScript, null);
             }
