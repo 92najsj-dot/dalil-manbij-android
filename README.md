@@ -30,3 +30,11 @@ Before testing, add exactly this URI to **Supabase Dashboard → Authentication 
 `dalilmanbij://auth/callback`
 
 Do not replace the existing website URLs. Keep them and add this URI as an additional allowed redirect. Then build/install the APK from branch `preview/oauth-return-to-apk-2026-10-22` and test Google and Facebook separately. This change is not production-ready until the redirect URI is allowlisted and both provider flows are verified on-device.
+
+
+## Phase 3: sharing and updates preview
+- The Android WebView exposes a native share sheet through `DalilAndroid.shareText(title, text)`.
+- Shared listing/shop links use `?listingId=<id>` and `?businessId=<id>`; the website scrolls to and highlights the matching card when the item is loaded.
+- The website has a “Share app” action and an “About app and updates” panel showing version 1.0.0.
+- The APK's unverified HTTPS intent filter is intentionally not enabled yet. Automatic opening of web links in the APK requires Android App Links verification with a stable signing certificate and a matching `/.well-known/assetlinks.json` on the production domain. This is deferred to avoid interfering with the currently installed browser PWA or production site.
+- Build and test this branch before distributing. The website changes are in a preview branch and have not been deployed to production.
