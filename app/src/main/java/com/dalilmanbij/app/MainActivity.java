@@ -39,6 +39,16 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.WHITE);
 
+        // Keep all app content inside the safe area, below the status bar and above navigation.
+        // This prevents Android 15+ edge-to-edge layouts from drawing the website under system icons.
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            int topInset = insets.getSystemWindowInsetTop();
+            int bottomInset = insets.getSystemWindowInsetBottom();
+            view.setPadding(0, topInset, 0, bottomInset);
+            return insets.consumeSystemWindowInsets();
+        });
+        root.setFitsSystemWindows(true);
+
         ProgressBar progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         root.addView(progress, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(3)));
