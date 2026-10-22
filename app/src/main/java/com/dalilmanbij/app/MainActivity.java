@@ -16,6 +16,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.JavascriptInterface;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -98,6 +99,7 @@ public class MainActivity extends Activity {
         // Let the website recognize the APK and use its dedicated OAuth return URI.
         settings.setUserAgentString(settings.getUserAgentString() + " DalilManbijAndroid");
         settings.setJavaScriptEnabled(true);
+        webView.addJavascriptInterface(new DalilAndroidBridge(), "DalilAndroid");
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(true);
@@ -200,6 +202,25 @@ public class MainActivity extends Activity {
             }
         }
         return builder.build().toString();
+    }
+
+    /** Small bridge for native Android share sheet; the WebView only loads our trusted site. */
+    private final class DalilAndroidBridge {
+        @JavascriptInterface
+        public void shareText(String title, String text) {
+            runOnUiThread(() -> {
+                Intent send = new Intent(Intent.ACTION_SEND);
+                send.setType("text/plain");
+                send.putExtra(Intent.EXTRA_SUBJECT, title == null ? "دليل منبج" : title);
+                send.putExtra(Intent.EXTRA_TEXT, text == null ? HOME : text);
+                startActivity(Intent.createChooser(send, "مشاركة عبر"));
+            });
+        }
+
+        @JavascriptInterface
+        public String getAppVersion() {
+            return "1.0.0";
+        }
     }
 
     private void openExternal(Uri uri) {
