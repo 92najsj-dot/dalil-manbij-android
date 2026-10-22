@@ -21,3 +21,12 @@ This is a separate Android WebView wrapper for the existing Dalil Manbij website
 - Test sign-in/out, ad publishing/editing, image uploads, shop pages and WhatsApp links before distributing.
 - Never put Supabase service-role keys or other secrets in this repository.
 - This repository is separate from the production website; do not connect it to Cloudflare Pages.
+
+
+## OAuth callback preview (before testing Google/Facebook)
+This preview uses the Android deep-link URI `dalilmanbij://auth/callback` so the browser can return the OAuth result to the APK instead of opening the installed browser PWA.
+
+Before testing, add exactly this URI to **Supabase Dashboard → Authentication → URL Configuration → Redirect URLs**:
+`dalilmanbij://auth/callback`
+
+Do not replace the existing website URLs. Keep them and add this URI as an additional allowed redirect. Then build/install the APK from branch `preview/oauth-return-to-apk-2026-10-22` and test Google and Facebook separately. This change is not production-ready until the redirect URI is allowlisted and both provider flows are verified on-device.
