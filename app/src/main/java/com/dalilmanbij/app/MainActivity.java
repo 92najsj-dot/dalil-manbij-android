@@ -150,6 +150,19 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
+                // App-only first-launch welcome. This is stored in Android preferences and
+                // does not change the website or its localStorage.
+                android.content.SharedPreferences prefs =
+                        getSharedPreferences("dalil_app_preferences", MODE_PRIVATE);
+                if (!prefs.getBoolean("native_welcome_seen_v1", false)) {
+                    prefs.edit().putBoolean("native_welcome_seen_v1", true).apply();
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("📍 دليل منبج")
+                            .setMessage("💚 أهلاً وسهلاً فيك!\\n\\nكل منبج وريفها بين إيديك.\\n\\n🛍️ تسوّق   •   🏷️ بيع   •   📢 أعلن   •   🔎 اكتشف\\n\\nكل ما تحتاجه بمنبج وريفها، بمكان واحد.")
+                            .setPositiveButton("✓ يلا نبدأ", (dialog, which) -> dialog.dismiss())
+                            .setCancelable(false)
+                            .show();
+                }
                 // Native-app-only enhancement. Wait for Supabase-backed promotions to render
                 // before enabling the carousel; onPageFinished fires before async data arrives.
                 String carouselScript = "(function(){try{" +
