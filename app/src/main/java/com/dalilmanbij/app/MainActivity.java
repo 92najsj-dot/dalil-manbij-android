@@ -167,6 +167,8 @@ public class MainActivity extends Activity {
 
         if (isOAuthCallback(getIntent())) {
             webView.loadUrl(buildOAuthReturnUrl(getIntent().getData()));
+        } else if (isContentDeepLink(getIntent())) {
+            webView.loadUrl(buildContentDeepLinkUrl(getIntent().getData()));
         } else if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
         } else {
@@ -178,8 +180,11 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        if (isOAuthCallback(intent) && webView != null) {
+        if (webView == null) return;
+        if (isOAuthCallback(intent)) {
             webView.loadUrl(buildOAuthReturnUrl(intent.getData()));
+        } else if (isContentDeepLink(intent)) {
+            webView.loadUrl(buildContentDeepLinkUrl(intent.getData()));
         }
     }
 
@@ -189,6 +194,28 @@ public class MainActivity extends Activity {
         return OAUTH_SCHEME.equals(uri.getScheme())
                 && "auth".equals(uri.getHost())
                 && "/callback".equals(uri.getPath());
+    }
+
+    private boolean isContentDeepLink(Intent intent) {
+        if (intent == null || intent.getData() == null) return false;
+        Uri uri = intent.getData();
+        return "https".equals(uri.getScheme())
+                && "dalil-manbij-new.pages.dev".equalsIgnoreCase(uri.getHost())
+                && (uri.getQueryParameter("listingId") != null
+                    || uri.getQueryParameter("businessId") != null);
+    }
+
+    private String buildContentDeepLinkUrl(Uri sharedUri) {
+        Uri.Builder builder = Uri.parse(HOME).buildUpon();
+        if (sharedUri != null) {
+            for (String key : new String[]{"listingId", "businessId"}) {
+                String value = sharedUri.getQueryParameter(key);
+                if (value != null && !value.isEmpty()) builder.appendQueryParameter(key, value);
+            }
+            String fragment = sharedUri.getFragment();
+            if (fragment != null && !fragment.isEmpty()) builder.fragment(fragment);
+        }
+        return builder.build().toString();
     }
 
     // Pass only OAuth result parameters back into the existing WebView origin so
