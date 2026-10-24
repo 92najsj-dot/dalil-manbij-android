@@ -100,6 +100,10 @@ public class MainActivity extends Activity {
         settings.setUserAgentString(settings.getUserAgentString() + " DalilManbijAndroid");
         settings.setJavaScriptEnabled(true);
         webView.addJavascriptInterface(new DalilAndroidBridge(), "DalilAndroid");
+        // Always load the current production website UI in this test APK, rather than an old cached layout.
+        // The website itself, its database and its production files are not modified by this setting.
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        webView.clearCache(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(true);
