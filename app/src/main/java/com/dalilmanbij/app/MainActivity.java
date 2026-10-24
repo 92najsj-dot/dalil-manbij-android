@@ -17,6 +17,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.JavascriptInterface;
+import android.webkit.DownloadListener;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -110,6 +111,18 @@ public class MainActivity extends Activity {
         settings.setLoadsImagesAutomatically(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setSupportMultipleWindows(false);
+
+        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
+            try {
+                Intent download = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                startActivity(Intent.createChooser(download, "فتح أو تنزيل الملف"));
+            } catch (ActivityNotFoundException ignored) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setMessage("لا يوجد تطبيق مناسب لفتح هذا الملف.")
+                        .setPositiveButton("حسناً", null)
+                        .show();
+            }
+        });
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -250,7 +263,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String getAppVersion() {
-            return "1.0.0";
+            return "1.0.1";
         }
     }
 
