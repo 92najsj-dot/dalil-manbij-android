@@ -16,6 +16,8 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.JavascriptInterface;
+import android.webkit.DownloadListener;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -24,6 +26,7 @@ import android.graphics.Color;
 
 public class MainActivity extends Activity {
     private static final String HOME = "https://dalil-manbij-new.pages.dev/";
+    private static final String OAUTH_SCHEME = "dalilmanbij";
     private WebView webView;
     private LinearLayout errorPanel;
     private ValueCallback<Uri[]> fileCallback;
@@ -94,13 +97,32 @@ public class MainActivity extends Activity {
         setContentView(root);
 
         WebSettings settings = webView.getSettings();
+        // Let the website recognize the APK and use its dedicated OAuth return URI.
+        settings.setUserAgentString(settings.getUserAgentString() + " DalilManbijAndroid");
         settings.setJavaScriptEnabled(true);
+        webView.addJavascriptInterface(new DalilAndroidBridge(), "DalilAndroid");
+        // Always load the current production website UI in this test APK, rather than an old cached layout.
+        // The website itself, its database and its production files are not modified by this setting.
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        webView.clearCache(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(true);
         settings.setLoadsImagesAutomatically(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setSupportMultipleWindows(false);
+
+        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
+            try {
+                Intent download = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                startActivity(Intent.createChooser(download, "فتح أو تنزيل الملف"));
+            } catch (ActivityNotFoundException ignored) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setMessage("لا يوجد تطبيق مناسب لفتح هذا الملف.")
+                        .setPositiveButton("حسناً", null)
+                        .show();
+            }
+        });
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -173,49 +195,6 @@ public class MainActivity extends Activity {
             }
 
             @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                // App-only first-launch welcome. This is stored in Android preferences and
-                // does not change the website or its localStorage.
-                android.content.SharedPreferences prefs =
-                        getSharedPreferences("dalil_app_preferences", MODE_PRIVATE);
-                if (!prefs.getBoolean("native_welcome_seen_v1", false)) {
-                    prefs.edit().putBoolean("native_welcome_seen_v1", true).apply();
-                    new AlertDialog.Builder(MainActivity.this)
-                            .setTitle("📍 دليل منبج")
-                            .setMessage("💚 أهلاً وسهلاً فيك!\\n\\nكل منبج وريفها بين إيديك.\\n\\n🛍️ تسوّق   •   🏷️ بيع   •   📢 أعلن   •   🔎 اكتشف\\n\\nكل ما تحتاجه بمنبج وريفها، بمكان واحد.")
-                            .setPositiveButton("✓ يلا نبدأ", (dialog, which) -> dialog.dismiss())
-                            .setCancelable(false)
-                            .show();
-                }
-                // Native-app-only enhancement. Wait for Supabase-backed promotions to render
-                // before enabling the carousel; onPageFinished fires before async data arrives.
-                String carouselScript = "(function(){try{" +
-                    "if(location.hostname!=='dalil-manbij-new.pages.dev')return;" +
-                    "var styleId='dalil-app-promo-carousel-style';" +
-                    "if(!document.getElementById(styleId)){var st=document.createElement('style');st.id=styleId;" +
-                    "st.textContent='#featuredPromotions #promotionGrid.app-promo-carousel{display:flex!important;flex-wrap:nowrap!important;gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;direction:rtl;padding:6px 2px 14px;-webkit-overflow-scrolling:touch;scrollbar-width:none}'+ " +
-                    "'#featuredPromotions #promotionGrid.app-promo-carousel::-webkit-scrollbar{display:none}'+ " +
-                    "'#featuredPromotions #promotionGrid.app-promo-carousel>.promo-card{flex:0 0 min(82%,310px);min-width:0;scroll-snap-align:start}'+ " +
-                    "'#featuredPromotions .promo-card{height:auto}';document.head.appendChild(st);}" +
-                    "var grid=document.getElementById('promotionGrid');if(!grid)return;" +
-                    "if(grid.dataset.appCarouselInit==='1')return;grid.dataset.appCarouselInit='1';" +
-                    "var timer=null;function stop(){if(timer){clearInterval(timer);timer=null;}}" +
-                    "function start(){stop();if(grid.children.length<2||document.hidden)return;timer=setInterval(function(){" +
-                    "if(grid.children.length<2)return;var max=grid.scrollWidth-grid.clientWidth;if(max<8)return;" +
-                    "var rtl=getComputedStyle(grid).direction==='rtl';var current=rtl?Math.abs(grid.scrollLeft):grid.scrollLeft;" +
-                    "if(current>=max-8){grid.scrollTo({left:0,behavior:'smooth'});}" +
-                    "else{grid.scrollBy({left:(rtl?-1:1)*Math.min(grid.clientWidth*.82,300),behavior:'smooth'});}" +
-                    "},4500);}" +
-                    "function apply(){if(grid.children.length){grid.classList.add('app-promo-carousel');start();}}" +
-                    "var observer=new MutationObserver(function(){apply();});observer.observe(grid,{childList:true,subtree:false});" +
-                    "apply();grid.addEventListener('touchstart',stop,{passive:true});grid.addEventListener('touchend',function(){setTimeout(start,2500);},{passive:true});" +
-                    "document.addEventListener('visibilitychange',function(){document.hidden?stop():start();});" +
-                    "}catch(e){console.log('App featured carousel:',e);}})();";
-                view.evaluateJavascript(carouselScript, null);
-            }
-
-            @Override
             public void onReceivedError(WebView view, WebResourceRequest request,
                                         WebResourceError error) {
                 if (request.isForMainFrame()) showError();
@@ -228,10 +207,88 @@ public class MainActivity extends Activity {
             }
         });
 
-        if (savedInstanceState != null) {
+        if (isOAuthCallback(getIntent())) {
+            webView.loadUrl(buildOAuthReturnUrl(getIntent().getData()));
+        } else if (isContentDeepLink(getIntent())) {
+            webView.loadUrl(buildContentDeepLinkUrl(getIntent().getData()));
+        } else if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
         } else {
             webView.loadUrl(HOME);
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (webView == null) return;
+        if (isOAuthCallback(intent)) {
+            webView.loadUrl(buildOAuthReturnUrl(intent.getData()));
+        } else if (isContentDeepLink(intent)) {
+            webView.loadUrl(buildContentDeepLinkUrl(intent.getData()));
+        }
+    }
+
+    private boolean isOAuthCallback(Intent intent) {
+        if (intent == null || intent.getData() == null) return false;
+        Uri uri = intent.getData();
+        return OAUTH_SCHEME.equals(uri.getScheme())
+                && "auth".equals(uri.getHost())
+                && "/callback".equals(uri.getPath());
+    }
+
+    private boolean isContentDeepLink(Intent intent) {
+        if (intent == null || intent.getData() == null) return false;
+        Uri uri = intent.getData();
+        return "https".equals(uri.getScheme())
+                && "dalil-manbij-new.pages.dev".equalsIgnoreCase(uri.getHost())
+                && (uri.getQueryParameter("listingId") != null
+                    || uri.getQueryParameter("businessId") != null);
+    }
+
+    private String buildContentDeepLinkUrl(Uri sharedUri) {
+        Uri.Builder builder = Uri.parse(HOME).buildUpon();
+        if (sharedUri != null) {
+            for (String key : new String[]{"listingId", "businessId"}) {
+                String value = sharedUri.getQueryParameter(key);
+                if (value != null && !value.isEmpty()) builder.appendQueryParameter(key, value);
+            }
+            String fragment = sharedUri.getFragment();
+            if (fragment != null && !fragment.isEmpty()) builder.fragment(fragment);
+        }
+        return builder.build().toString();
+    }
+
+    // Pass only OAuth result parameters back into the existing WebView origin so
+    // Supabase JS can exchange the PKCE code using the verifier stored in WebView.
+    private String buildOAuthReturnUrl(Uri callback) {
+        Uri.Builder builder = Uri.parse(HOME).buildUpon();
+        if (callback != null) {
+            for (String key : new String[]{"code", "error", "error_code", "error_description"}) {
+                String value = callback.getQueryParameter(key);
+                if (value != null && !value.isEmpty()) builder.appendQueryParameter(key, value);
+            }
+        }
+        return builder.build().toString();
+    }
+
+    /** Small bridge for native Android share sheet; the WebView only loads our trusted site. */
+    private final class DalilAndroidBridge {
+        @JavascriptInterface
+        public void shareText(String title, String text) {
+            runOnUiThread(() -> {
+                Intent send = new Intent(Intent.ACTION_SEND);
+                send.setType("text/plain");
+                send.putExtra(Intent.EXTRA_SUBJECT, title == null ? "دليل منبج" : title);
+                send.putExtra(Intent.EXTRA_TEXT, text == null ? HOME : text);
+                startActivity(Intent.createChooser(send, "مشاركة عبر"));
+            });
+        }
+
+        @JavascriptInterface
+        public String getAppVersion() {
+            return "1.0.1";
         }
     }
 
