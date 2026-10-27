@@ -1,2 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<inset xmlns:android="http://schemas.android.com/apk/res/android" android:drawable="@drawable/dalil_official_icon" android:inset="0%" />
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/dalil_logo"
+    android:inset="16%" />
