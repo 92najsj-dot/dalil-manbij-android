@@ -28,6 +28,12 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      - name: Use a separate package ID for pull-request test APKs
+        if: github.event_name == 'pull_request'
+        run: |
+          sed -i "s/applicationId 'com.dalilmanbij.app.preview'/applicationId 'com.dalilmanbij.app.performance'/" app/build.gradle
+          sed -i "s/versionName '1.0.1'/versionName '1.0.1-performance'/" app/build.gradle
+
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
 
@@ -40,6 +46,7 @@ jobs:
           retention-days: 14
 
       - name: Publish APK to stable download release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.0
