@@ -96,6 +96,10 @@ public class MainActivity extends Activity {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        // Keep normal HTTP/WebView caching enabled so repeat visits do not redownload every asset.
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        // Pre-render nearby off-screen content to reduce scroll jank on supported Android versions.
+        settings.setOffscreenPreRaster(true);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(true);
         settings.setLoadsImagesAutomatically(true);
